@@ -224,7 +224,7 @@ Relation between low-level API commands and Python-OpenEVSE
 * GS: `status`, `elapsed`
 * GT: `time`
 * GU: `accumulated_wh`, `elapsed`
-* GV: ``
+* GV: `version`
  
 
 Some links to OpenEVSE
