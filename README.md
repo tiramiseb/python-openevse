@@ -29,6 +29,17 @@ See the inline documentation, especially the FUNCTIONS part :
     >>> import openevse
     >>> help(openevse)
 
+License
+-------
+
+[MIT](http://opensource.org/licenses/MIT)
+
+Copyright (c) 2015 Sébastien Maccagnoni-Munch
+
+In short : do what you want but keep my name in the resulting software.
+
+Please, if you improve it, contribute back. Thanks ! :)
+
 The low-level API
 -----------------
 
