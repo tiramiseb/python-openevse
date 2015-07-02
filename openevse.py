@@ -145,12 +145,17 @@ class Flags:
         self.lcd_type = 'monochrome' if flags & 0x0100 else 'rgb'
         self.gfi_self_test = not flags & 0x0200
 
-def init():
+def init(port=None):
     """Initialize the communication
+
+    Arguments:
+        * port: name of the port to connect to (default port is /dev/ttyAMA0,
+                the serial port on the Raspberry Pi platform
     
     Returns True or False"""
     # TODO Test some API calls and make some functions inactive if the calls
     # are unavailable (no clock, no ammeter, no voltmeter...)
+    _param['port'] = port
     return echo(False)
 
 def reset():
