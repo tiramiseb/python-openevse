@@ -1,3 +1,4 @@
+===============
 Python-OpenEVSE
 ===============
 
@@ -24,7 +25,7 @@ The default baudrate is 115200, according to OpenEVSE sources (`open_evse.h`).
 How to use this library ?
 -------------------------
 
-See the inline documentation, especially the FUNCTIONS part :
+See the inline documentation, especially the FUNCTIONS part::
 
     >>> import openevse
     >>> help(openevse)
@@ -32,7 +33,7 @@ See the inline documentation, especially the FUNCTIONS part :
 License
 -------
 
-[MIT](http://opensource.org/licenses/MIT)
+`MIT <http://opensource.org/licenses/MIT>`_
 
 Copyright (c) 2015 Sébastien Maccagnoni-Munch
 
@@ -43,7 +44,7 @@ Please, if you improve it, contribute back. Thanks ! :)
 The low-level API
 -----------------
 
-Documentation on the RAPI protocol v1.0.3, from `rapi_proc.h`:
+Documentation on the RAPI protocol v1.0.3, from `rapi_proc.h`::
 
      **** RAPI protocol ****
     
@@ -199,48 +200,48 @@ Documentation on the RAPI protocol v1.0.3, from `rapi_proc.h`:
 Relation between low-level API commands and Python-OpenEVSE
 -----------------------------------------------------------
 
-* FB: `lcd_backlight_color`
-* FD: `status`
-* FE: `status`
-* FP: `display_text`
-* FR: `reset`
-* FS: `status`
-* S0: `lcd_type`
-* S1: `time`
-* S2: `ammeter_calibration`
-* S3: `time_limit`
-* SA: `ammeter_settings`
-* SC: `current_capacity`
-* SD: `diode_check`
-* SE: `echo`
-* SF: `gfi_self_test`
-* SG: `ground_check`
-* SH: `charge_limit`
-* SK: `accumulated_wh`
-* SL: `service_level`
-* SM: `voltmeter_settings`
-* SR: `stuck_relay_check`
-* SS: `gfi_self_test` (it is the same as SF)
-* ST: `timer`
-* SV: `vent_required`
-* G3: `time_limit`
-* GA: `ammeter_settings`
-* GC: `current_capacity_range`
-* GE: `current_capacity` (1st field), see Flags class (2nd field)
-* GF: `fault_counters`
-* GG: `charging_current_and_voltage`
-* GH: `charge_limit`
-* GM: `voltmeter_settings`
-* GP: `temperature`
-* GS: `status`, `elapsed`
-* GT: `time`
-* GU: `accumulated_wh`, `elapsed`
-* GV: `version`
+* FB: ``lcd_backlight_color``
+* FD: ``status``
+* FE: ``status``
+* FP: ``display_text``
+* FR: ``reset``
+* FS: ``status``
+* S0: ``lcd_type``
+* S1: ``time``
+* S2: ``ammeter_calibration``
+* S3: ``time_limit``
+* SA: ``ammeter_settings``
+* SC: ``current_capacity``
+* SD: ``diode_check``
+* SE: ``echo``
+* SF: ``gfi_self_test``
+* SG: ``ground_check``
+* SH: ``charge_limit``
+* SK: ``accumulated_wh``
+* SL: ``service_level``
+* SM: ``voltmeter_settings``
+* SR: ``stuck_relay_check``
+* SS: ``gfi_self_test`` (it is the same as SF)
+* ST: ``timer``
+* SV: ``vent_required``
+* G3: ``time_limit``
+* GA: ``ammeter_settings``
+* GC: ``current_capacity_range``
+* GE: ``current_capacity`` (1st field), see Flags class (2nd field)
+* GF: ``fault_counters``
+* GG: ``charging_current_and_voltage``
+* GH: ``charge_limit``
+* GM: ``voltmeter_settings``
+* GP: ``temperature``
+* GS: ``status``, ``elapsed``
+* GT: ``time``
+* GU: ``accumulated_wh``, ``elapsed``
+* GV: ``version``
  
 
 Some links to OpenEVSE
 ----------------------
 
-* [OpenEVSE project](https://code.google.com/p/open-evse/)
-* [Firmware source code](https://github.com/lincomatic/open_evse)
-* [OpenEVSE store](http://store.openevse.com/)
+* `OpenEVSE project <https://code.google.com/p/open-evse/>`_
+* `Firmware source code <https://github.com/lincomatic/open_evse>`_
+* `OpenEVSE store <http://store.openevse.com/>`_
