@@ -42,6 +42,8 @@ If a problem is identified, the corresponding exception is raised."""
 
 import serial
 
+_version = '0.1a1'
+
 _param = {
     'port': '/dev/ttyAMA0',
     'baudrate': 115200,
