@@ -20,7 +20,7 @@ What is RAPI ?
 RAPI stands for "Remote API", allowing remote hardware to control the OpenEVSE
 board using a serial port, with the FTDI/UART pins on the board.
 
-The default baudrate is 115200, according to OpenEVSE sources (`open_evse.h`).
+The default baudrate is 115200, according to OpenEVSE sources (``open_evse.h``).
 
 How to install this library ?
 -----------------------------
@@ -51,7 +51,7 @@ Please, if you improve it, contribute back. Thanks ! :)
 The low-level API
 -----------------
 
-Documentation on the RAPI protocol v1.0.3, from `rapi_proc.h`::
+Documentation on the RAPI protocol v1.0.3, from ``rapi_proc.h``::
 
      **** RAPI protocol ****
     
