@@ -22,6 +22,13 @@ board using a serial port, with the FTDI/UART pins on the board.
 
 The default baudrate is 115200, according to OpenEVSE sources (`open_evse.h`).
 
+How to install this library ?
+-----------------------------
+
+::
+
+    pip install python-openevse
+
 How to use this library ?
 -------------------------
 
