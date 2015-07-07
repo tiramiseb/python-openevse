@@ -42,7 +42,7 @@ If a problem is identified, the corresponding exception is raised."""
 
 import serial
 
-_version = '0.1a1'
+_version = '0.1a2'
 
 _param = {
     'port': '/dev/ttyAMA0',
@@ -91,6 +91,7 @@ def _base_request(*args):
     checksum = format(checksum, '02X')
     fullrequest = command+'^'+checksum+'\r'
     s = serial.Serial(**_param)
+    s.open()
     s.write(fullrequest)
     response = ''
     while True:
@@ -157,7 +158,8 @@ def init(port=None):
     Returns True or False"""
     # TODO Test some API calls and make some functions inactive if the calls
     # are unavailable (no clock, no ammeter, no voltmeter...)
-    _param['port'] = port
+    if port:
+        _param['port'] = port
     return echo(False)
 
 def reset():
