@@ -50,7 +50,7 @@ _param = {
     'timeout': 8
 }
 
-states = {
+_states = {
         0: 'unknown',
         1: 'not connected',
         2: 'connected',
@@ -91,7 +91,10 @@ def _base_request(*args):
     checksum = format(checksum, '02X')
     fullrequest = command+'^'+checksum+'\r'
     s = serial.Serial(**_param)
-    s.open()
+    try:
+        s.open()
+    except serial.serialutil.SerialException:
+        pass
     s.write(fullrequest)
     response = ''
     while True:
@@ -167,7 +170,7 @@ def reset():
     
     Returns the EVSE state after the reset"""
     done, data = _request_with_st_as_an_answer('FR')
-    if done: return states[int(data[0], 16)]
+    if done: return _states[int(data[0], 16)]
     raise EvseError
 
 _lcd_colors = ['off','red','green','yellow','blue','violet','teal','white']
@@ -209,11 +212,11 @@ def status(action=None):
         except KeyError: raise UnknownStatus
         done, data = _request(function)
         if done:
-            if data: return states[int(data[0], 16)]
+            if data: return _states[int(data[0], 16)]
         else:
             raise EvseError
     done, data = _request('GS')
-    if done: return states[int(data[0])]
+    if done: return _states[int(data[0])]
     raise EvseError
 
 def display_text(x, y, text):
