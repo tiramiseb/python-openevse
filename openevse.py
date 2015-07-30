@@ -43,7 +43,7 @@ If a problem is identified, the corresponding exception is raised."""
 import datetime
 import serial
 
-_version = '0.2a1'
+_version = '0.2a2'
 
 _states = {
         0: 'unknown',
@@ -476,9 +476,9 @@ class OpenEVSE:
         done, data = self._request('GF')
         if done:
             return {
-                'GFI self test': data[0],
-                'Ground': data[1],
-                'Stuck relay': data[2]
+                'GFI self test': int(data[0], 16),
+                'Ground': int(data[1], 16),
+                'Stuck relay': int(data[2], 16)
             }
         raise EvseError
 
