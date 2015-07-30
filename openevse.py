@@ -43,7 +43,7 @@ If a problem is identified, the corresponding exception is raised."""
 import datetime
 import serial
 
-_version = '0.2a2'
+_version = '0.2a3'
 
 _states = {
         0: 'unknown',
@@ -69,15 +69,7 @@ class EvseTimeoutError(Exception):
     pass
 class EvseError(Exception):
     pass
-class UnknownColorError(EvseError):
-    pass
-class UnknownStatusError(EvseError):
-    pass
-class UnknownLcdTypeError(EvseError):
-    pass
 class NoClock(EvseError):
-    pass
-class UnknownLevelError(EvseError):
     pass
 class NotCharging(Exception):
     pass
@@ -182,8 +174,7 @@ class OpenEVSE:
           * white
 
         Default: off (disable the backlight)"""
-        try: colorcode = _lcd_colors.index(color)
-        except ValueError: raise UnknownColorError
+        colorcode = _lcd_colors.index(color)
         if self._request('FB', str(colorcode))[0]: return True
         raise EvseError
 
@@ -201,8 +192,7 @@ class OpenEVSE:
         
         Returns the status of the EVSE as a string"""
         if action:
-            try: function = _status_functions[action]
-            except KeyError: raise UnknownStatusError
+            function = _status_functions[action]
             done, data = self._request(function)
             if done:
                 if data: return _states[int(data[0], 16)]
@@ -232,8 +222,7 @@ class OpenEVSE:
         
         Returns the LCD type ("monochrome" or "rgb")"""
         if lcdtype:
-            try: typecode = _lcd_types.index(lcdtype)
-            except ValueError: raise UnknownLcdTypeError
+            typecode = _lcd_types.index(lcdtype)
             if self._request('S0', str(typecode))[0]: return lcdtype
         else:
             return self._flags()['lcd_type']
@@ -396,8 +385,7 @@ class OpenEVSE:
                 return 0
             return flags.service_level
         else:
-            try: levelcode = _service_levels[level]
-            except IndexError: raise UnknownLevelError
+            levelcode = _service_levels[level]
             if self._request('SL', levelcode)[0]: return level
         raise EvseError
 
