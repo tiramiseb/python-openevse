@@ -43,7 +43,7 @@ If a problem is identified, the corresponding exception is raised."""
 import datetime
 import serial
 
-_version = '0.2a4'
+_version = '0.2'
 
 _states = {
         0: 'unknown',
