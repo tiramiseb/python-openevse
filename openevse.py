@@ -34,7 +34,7 @@ Exceptions
 ----------
 
 If there is a problem communicating with the OpenEVSE (timeout on the serial
-port), openevse.EvseTimeout is raised.
+port), openevse.EvseTimeoutError is raised.
 
 If there is another unidentified problem, openevse.EvseError is raised.
 
@@ -65,19 +65,19 @@ _status_functions = {'disable':'FD', 'enable':'FE', 'sleep':'FS'}
 _lcd_types=['monochrome', 'rgb']
 _service_levels=['A', '1', '2']
 
-class EvseTimeout(Exception):
+class EvseTimeoutError(Exception):
     pass
 class EvseError(Exception):
     pass
-class UnknownColor(EvseError):
+class UnknownColorError(EvseError):
     pass
-class UnknownStatus(EvseError):
+class UnknownStatusError(EvseError):
     pass
-class UnknownLcdType(EvseError):
+class UnknownLcdTypeError(EvseError):
     pass
 class NoClock(EvseError):
     pass
-class UnknownLevel(EvseError):
+class UnknownLevelError(EvseError):
     pass
 class NotCharging(Exception):
     pass
@@ -109,7 +109,7 @@ class OpenEVSE:
         while True:
             c = s.read()
             if c == '':
-                raise EvseTimeout
+                raise EvseTimeoutError
             response += c
             if c == '\r':
                 break
@@ -183,7 +183,7 @@ class OpenEVSE:
 
         Default: off (disable the backlight)"""
         try: colorcode = _lcd_colors.index(color)
-        except ValueError: raise UnknownColor
+        except ValueError: raise UnknownColorError
         if self._request('FB', str(colorcode))[0]: return True
         raise EvseError
 
@@ -202,7 +202,7 @@ class OpenEVSE:
         Returns the status of the EVSE as a string"""
         if action:
             try: function = _status_functions[action]
-            except KeyError: raise UnknownStatus
+            except KeyError: raise UnknownStatusError
             done, data = self._request(function)
             if done:
                 if data: return _states[int(data[0], 16)]
@@ -233,7 +233,7 @@ class OpenEVSE:
         Returns the LCD type ("monochrome" or "rgb")"""
         if lcdtype:
             try: typecode = _lcd_types.index(lcdtype)
-            except ValueError: raise UnknownLcdType
+            except ValueError: raise UnknownLcdTypeError
             if self._request('S0', str(typecode))[0]: return lcdtype
         else:
             return self._flags()['lcd_type']
@@ -397,7 +397,7 @@ class OpenEVSE:
             return flags.service_level
         else:
             try: levelcode = _service_levels[level]
-            except IndexError: raise UnknownLevel
+            except IndexError: raise UnknownLevelError
             if self._request('SL', levelcode)[0]: return level
         raise EvseError
 
