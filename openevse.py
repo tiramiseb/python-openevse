@@ -42,6 +42,7 @@ If a problem is identified, the corresponding exception is raised."""
 
 import datetime
 import serial
+import time
 
 _version = '0.2+dev'
 
@@ -65,6 +66,8 @@ _status_functions = {'disable':'FD', 'enable':'FE', 'sleep':'FS'}
 _lcd_types=['monochrome', 'rgb']
 _service_levels=['A', '1', '2']
 
+SERIAL_TIMEOUT = 1
+
 class EvseError(Exception):
     pass
 class EvseTimeoutError(EvseError):
@@ -76,53 +79,51 @@ class NotCharging(Exception):
 
 class OpenEVSE:
 
-    def __init__(self, port='/dev/ttyAMA0', baudrate=115200, timeout=8):
-        self._params = {
-            'port': port,
-            'baudrate': baudrate,
-            'timeout': timeout
-        }
+    def __init__(self, port='/dev/ttyAMA0', baudrate=115200):
+        self._s = serial.Serial(port=port, baudrate=baudrate,
+                                timeout=SERIAL_TIMEOUT)
         # The first call may be wrong because other characters may have been
         # written on the serial port before initializing this class
-        # That's why there is this "try"
+        # That's why there is this "try" and this second "echo"
         try: self.echo(False)
         except EvseError:
             self.echo(False)
 
-    def _base_request(self, *args):
+    def __del__(self):
+        self._s.close()
+
+    def _read_line(self):
+        line = ''
+        while True:
+            c = self._s.read()
+            if c == '':
+                raise EvseTimeoutError
+            line += c
+            if c == '\r':
+                break
+        return line
+
+    def _get_response(self):
+        response = self._read_line()
+        if response[:3] in ('$OK', '$NK'):
+            response = response.split()
+            return (response[0] == '$OK', response[1:])
+        else:
+            return self._get_response()
+
+    def _silent_request(self, *args):
         command = '$' + ' '.join(args)
         checksum = 0
         for i in bytearray(command):
             checksum ^= i
         checksum = format(checksum, '02X')
-        fullrequest = command+'^'+checksum+'\r'
-        s = serial.Serial(**self._params)
-        try:
-            s.open()
-        except serial.serialutil.SerialException:
-            pass
-        s.write(fullrequest)
-        response = ''
-        while True:
-            c = s.read()
-            if c == '':
-                raise EvseTimeoutError
-            response += c
-            if c == '\r':
-                break
-        s.close()
-        response = response.split()
-        return response[0], response[1:]
-
-    def _request_with_st_as_an_answer(self, *args):
-        response, args = self._base_request(*args)
-        ok = True if response in ('ST', '$ST') else False
-        return (ok, args)
+        request = command+'^'+checksum+'\r'
+        self._s.write(request)
     
     def _request(self, *args):
-        response, args = self._base_request(*args)
-        ok = True if response == '$OK' else False
-        return (ok, args)
+        self._silent_request(*args)
+        return self._get_response()
+
 
     def _flags(self):
         """EVSE controller flags
@@ -160,10 +161,22 @@ class OpenEVSE:
     def reset(self):
         """Reset the OpenEVSE
         
-        Returns the EVSE state after the reset"""
-        done, data = self._request_with_st_as_an_answer('FR')
-        if done: return _states[int(data[0], 16)]
-        raise EvseError
+        Returns the EVSE state after the reset
+        
+        Raises EvseTimeoutError if the OpenEVSE did not reboot within 10 seconds
+        """
+        self._silent_request('FR')
+        # Give the OpenEVSE at most 10 seconds to reboot
+        self._s.timeout = 10
+        # Read the next received line, which should start with "ST"
+        line = self._read_line()
+        self._s.timeout = SERIAL_TIMEOUT
+        if line[:2] == 'ST':
+            time.sleep(1) # Let the OpenEVSE finish its boot sequence
+                          # after the "ST" line is received
+            return self.status()
+        else:
+            raise EvseError
 
     def lcd_backlight_color(self, color='off'):
         """Change the LCD backlight color
