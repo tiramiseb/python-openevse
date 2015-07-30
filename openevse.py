@@ -43,7 +43,7 @@ If a problem is identified, the corresponding exception is raised."""
 import datetime
 import serial
 
-_version = '0.2'
+_version = '0.2+dev'
 
 _states = {
         0: 'unknown',
@@ -82,7 +82,12 @@ class OpenEVSE:
             'baudrate': baudrate,
             'timeout': timeout
         }
-        self.echo(False)
+        # The first call may be wrong because other characters may have been
+        # written on the serial port before initializing this class
+        # That's why there is this "try"
+        try: self.echo(False)
+        except EvseError:
+            self.echo(False)
 
     def _base_request(self, *args):
         command = '$' + ' '.join(args)

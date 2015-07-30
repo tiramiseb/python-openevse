@@ -6,6 +6,11 @@ Some versions are "unreleased" : published in the Git repository but not
 released on the *Pyton Package Index*. That's why some versions are not
 named here.
 
+In development
+--------------
+
+* Bugfix: retry echo initialization if failed because of chars sent previously
+
 v0.2 (2015-07-30)
 -----------------
 
