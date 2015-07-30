@@ -43,7 +43,7 @@ If a problem is identified, the corresponding exception is raised."""
 import datetime
 import serial
 
-_version = '0.2a3'
+_version = '0.2a4'
 
 _states = {
         0: 'unknown',
@@ -65,9 +65,9 @@ _status_functions = {'disable':'FD', 'enable':'FE', 'sleep':'FS'}
 _lcd_types=['monochrome', 'rgb']
 _service_levels=['A', '1', '2']
 
-class EvseTimeoutError(Exception):
-    pass
 class EvseError(Exception):
+    pass
+class EvseTimeoutError(EvseError):
     pass
 class NoClock(EvseError):
     pass
