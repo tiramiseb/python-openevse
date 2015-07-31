@@ -21,24 +21,8 @@
 # THE SOFTWARE.
 """Communicate with an OpenEVSE equipment, on the UART port
 
-Initialization
---------------
-
-If you are not sure the protocol is ready to be used by this Python module, you
-may execute openevse.init(), which returns True if everything went well, False
-otherwise.
-
-For the moment, it only disables the echo ("$SE 0").
-
-Exceptions
-----------
-
-If there is a problem communicating with the OpenEVSE (timeout on the serial
-port), openevse.EvseTimeoutError is raised.
-
-If there is another unidentified problem, openevse.EvseError is raised.
-
-If a problem is identified, the corresponding exception is raised."""
+Please note OpenEVSE object initialization disables the echo ("$SE 0").
+"""
 
 import datetime
 import serial
@@ -78,6 +62,7 @@ class NotCharging(Exception):
     pass
 
 class OpenEVSE:
+    """A connection to an OpenEVSE equipment through its RAPI serial protocol."""
 
     def __init__(self, port='/dev/ttyAMA0', baudrate=115200):
         self._s = serial.Serial(port=port, baudrate=baudrate,
@@ -93,6 +78,11 @@ class OpenEVSE:
         self._s.close()
 
     def _read_line(self):
+        """Read a line from the serial port.
+        
+        Reimplementation was needed beause readline inherited from _IOBase does
+        not allow \\r as an EOL character.
+        """
         line = ''
         while True:
             c = self._s.read()
@@ -104,6 +94,10 @@ class OpenEVSE:
         return line
 
     def _get_response(self):
+        """Get the response of a command.
+        
+        A response should start with "$OK" or "$NK".
+        """
         response = self._read_line()
         if response[:3] in ('$OK', '$NK'):
             response = response.split()
@@ -112,6 +106,7 @@ class OpenEVSE:
             return self._get_response()
 
     def _silent_request(self, *args):
+        """Send a request, do not read its response"""
         command = '$' + ' '.join(args)
         checksum = 0
         for i in bytearray(command):
@@ -121,12 +116,13 @@ class OpenEVSE:
         self._s.write(request)
     
     def _request(self, *args):
+        """Send a requests, wait for its response"""
         self._silent_request(*args)
         return self._get_response()
 
 
     def _flags(self):
-        """EVSE controller flags
+        """Get EVSE controller flags
 
         Specific values:
         * service_level: 1 or 2
@@ -191,7 +187,8 @@ class OpenEVSE:
           * teal
           * white
 
-        Default: off (disable the backlight)"""
+        Default: off (disable the backlight)
+        """
         colorcode = _lcd_colors.index(color)
         if self._request('FB', str(colorcode))[0]: return True
         raise EvseError
@@ -208,7 +205,8 @@ class OpenEVSE:
 
         Default: no action, request the status
         
-        Returns the status of the EVSE as a string"""
+        Returns the status of the EVSE as a string
+        """
         if action:
             function = _status_functions[action]
             done, data = self._request(function)
@@ -225,7 +223,8 @@ class OpenEVSE:
 
         Arguments:
           * x and y: cursor position
-          * text: text to display"""
+          * text: text to display
+          """
         if self._request('FP', str(x), str(y), str(text))[0]: return True
         raise EvseError
 
@@ -238,7 +237,8 @@ class OpenEVSE:
         
         If lcdtype is not specified, the current type is returned
         
-        Returns the LCD type ("monochrome" or "rgb")"""
+        Returns the LCD type ("monochrome" or "rgb")
+        """
         if lcdtype:
             typecode = _lcd_types.index(lcdtype)
             if self._request('S0', str(typecode))[0]: return lcdtype
@@ -254,7 +254,8 @@ class OpenEVSE:
         
         If the datetime object is not specified, get the current OpenEVSE clock
         
-        Returns a datetime object"""
+        Returns a datetime object
+        """
         if the_datetime:
             if self._request('S1',the_datetime.strftime('%y'), str(the_datetime.month),
                              str(the_datetime.day), str(the_datetime.hour),
@@ -285,7 +286,8 @@ class OpenEVSE:
 
         The maximum value is 3825 minutes.
         
-        Returns the limit"""
+        Returns the limit
+        """
         if limit is None:
             done, data = self._request('G3')
             if done: return int(data[0])*15
@@ -299,7 +301,8 @@ class OpenEVSE:
 
         If either of the arguments is None, get the values instead of setting them.
 
-        Returns a (scalefactor, offset) tuple"""
+        Returns a (scalefactor, offset) tuple
+        """
         if scalefactor is not None and offset is not None:
             if self._request('SA', str(scalefactor), str(offset))[0]:
                 return (scalefactor, offset)
@@ -313,7 +316,8 @@ class OpenEVSE:
         
         If capacity is None or 0, get the value
         
-        Returns the capacity in amperes"""
+        Returns the capacity in amperes
+        """
         if capacity:
             if self._request('SC', str(capacity))[0]: return capacity
         else:
@@ -327,7 +331,8 @@ class OpenEVSE:
         if enabled == False, disable the diode check
         if enabled is not specified, request the diode check status
         
-        Returns the diode check status"""
+        Returns the diode check status
+        """
         if enabled is None:
             return self._flags()['diode_check']
         if self._request('SD', str(int(enabled)))[0]: return enabled
@@ -336,7 +341,8 @@ class OpenEVSE:
     def echo(self, enabled=True):
         """Enable or disable echo
 
-        THIS LIBRARY IS NOT MEANT TO BE USED WITH ECHO ENABLED"""
+        THIS LIBRARY IS NOT MEANT TO BE USED WITH ECHO ENABLED
+        """
         if self._request('SE', str(int(enabled)))[0]: return True
         raise EvseError
 
@@ -346,7 +352,8 @@ class OpenEVSE:
         if enabled == False, disable the GFI self test
         if enabled is not specified, request the GFI self test status
         
-        Returns the GFI self test status"""
+        Returns the GFI self test status
+        """
         if enabled is None:
             return self._flags()['gfi_self_test']
         if self._request('SF', str(int(enabled)))[0]: return enabled
@@ -358,7 +365,8 @@ class OpenEVSE:
         if enabled == False, disable the ground check
         if enabled is not specified, request the ground check status
         
-        Returns the ground check status"""
+        Returns the ground check status
+        """
         if enabled is None:
             return self._flags()['ground_check']
         if self._request('SG', str(int(enabled)))[0]: return enabled
@@ -367,7 +375,8 @@ class OpenEVSE:
     def charge_limit(self, limit=None):
         """Get or set the charge limit (in kWh)
         
-        Returns the limit in kWh"""
+        Returns the limit in kWh
+        """
         if limit is None:
             done, data = self._request('GH')
             if done: return int(data[0])
@@ -378,7 +387,8 @@ class OpenEVSE:
     def accumulated_wh(self, wh=None):
         """Get or set the accumulated Wh
 
-        Returns the accumulated value in Wh"""
+        Returns the accumulated value in Wh
+        """
         if wh is None:
             done, data = self._request('GU')
             if done: return int(data[1])
@@ -396,9 +406,10 @@ class OpenEVSE:
 
         If the level is not specified, the current level is returned
         
-        Returns the current service level: 0 for auto, 1 or 2"""
+        Returns the current service level: 0 for auto, 1 or 2
+        """
         if level is None:
-            flags = Flags()
+            flags = self._flags()
             if flags.auto_service_level:
                 return 0
             return flags.service_level
@@ -412,7 +423,8 @@ class OpenEVSE:
 
         If either of the arguments is None, get the values instead of setting them.
 
-        Returns a (scalefactor, offset) tuple"""
+        Returns a (scalefactor, offset) tuple
+        """
         if scalefactor is not None and offset is not None:
             if self._request('SM', str(scalefactor), str(offset))[0]:
                 return (scalefactor, offset)
@@ -427,7 +439,8 @@ class OpenEVSE:
         if enabled == False, disable the stuck relay check
         if enabled is not specified, request the stuck relay check status
         
-        Returns the stuck relay check status"""
+        Returns the stuck relay check status
+        """
         if enabled is None:
             return self._flags()['stuck_relay_check']
         if self._request('SR', str(int(enabled)))[0]: return enabled
@@ -436,7 +449,8 @@ class OpenEVSE:
     def timer(self, starthour=None, startminute=None, endhour=None, endminute=None):
         """Set or cancel the charge timer
         
-        If any of the values is None, the timer is cancelled"""
+        If any of the values is None, the timer is cancelled
+        """
         if starthour is None or startminute is None or \
            endhour is None or endminute is None:
             done = self._request('ST', '0', '0', '0', '0')[0]
@@ -452,7 +466,8 @@ class OpenEVSE:
         if enabled == False, disable "ventilation required" 
         if enabled is not specified, request the "ventilation required" status
         
-        Returns the "ventilation required" status"""
+        Returns the "ventilation required" status
+        """
         if enabled is None:
             return self._flags()['vent_required']
         if self._request('SV', str(int(enabled)))[0]: return enabled
@@ -464,7 +479,8 @@ class OpenEVSE:
         (it depends on the service level)
         
         Returns a tuple of ints:
-            (min_capacity, max_capacity)"""
+            (min_capacity, max_capacity)
+        """
         done, data = self._request('GC')
         if done: return (int(data[0]), int(data[1]))
         raise EvseError
@@ -478,7 +494,8 @@ class OpenEVSE:
                 'Ground': Y,
                 'Stuck relay': Z
             }
-        ... where X, Y and Z are ints"""
+        ... where X, Y and Z are ints
+        """
         done, data = self._request('GF')
         if done:
             return {
@@ -496,7 +513,8 @@ class OpenEVSE:
                 'amps': X,
                 'volts': Y
             }
-        ... where X and Y are floats"""
+        ... where X and Y are floats
+        """
         done, data = self._request('GG')
         if done:
             milliamps = float(data[0])
@@ -520,7 +538,8 @@ class OpenEVSE:
             }
         ... where X, Y and Z are float
         
-        If a sensor is not installed, the value is 0.0"""
+        If a sensor is not installed, the value is 0.0
+        """
         done, data = self._request('GP')
         if done:
             return {
@@ -542,7 +561,8 @@ class OpenEVSE:
                 'Wh': Y
         ... where X is an int and Y is a float
 
-        If the charge state is not C (charging), raises NotCharging"""
+        If the charge state is not C (charging), raises NotCharging
+        """
         done, data1 = self._request('GS')
         if done:
             if data1[0] != '3':
@@ -563,7 +583,8 @@ class OpenEVSE:
                 'firmware': X,
                 'protocol': Y
             }
-        ... where X and Y are strings"""
+        ... where X and Y are strings
+        """
         done, data = self._request('GV')
         if done:
             return {
