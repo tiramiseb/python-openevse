@@ -32,7 +32,7 @@ How to install this library ?
 How to use this library ?
 -------------------------
 
-See the inline documentation, especially the FUNCTIONS part::
+See the inline documentation::
 
     >>> import openevse
     >>> help(openevse)

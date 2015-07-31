@@ -9,6 +9,7 @@ named here.
 In development
 --------------
 
+* Possibility to get status changes (they were ignored in previous versions)
 * Bugfix: retry echo initialization if failed because of chars sent previously
 
 v0.2 (2015-07-30)
