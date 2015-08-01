@@ -68,7 +68,7 @@ import serial
 import threading
 import time
 
-_version = '0.2+dev'
+_version = '0.3'
 
 states = {
         0: 'unknown',

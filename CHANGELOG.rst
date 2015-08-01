@@ -2,10 +2,6 @@
 Python-OpenEVSE changelog
 =========================
 
-Some versions are "unreleased" : published in the Git repository but not
-released on the *Pyton Package Index*. That's why some versions are not
-named here.
-
 v0.3 (2015-08-01)
 -----------------
 
