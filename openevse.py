@@ -28,6 +28,8 @@ On the UART port
 
 Create an instance of the SerialOpenEVSE class to initialize.
 
+This method needs pyserial.
+
 Example:
 
 >>> import openevse
@@ -89,7 +91,11 @@ Example:
 
 import datetime
 import re
-import serial
+try:
+    import serial
+    SERIAL = True
+except ImportError:
+    SERIAL = False
 import threading
 import time
 import urllib2
@@ -609,191 +615,191 @@ class BaseOpenEVSE:
             }
         raise EvseError
 
-class SerialOpenEVSE(BaseOpenEVSE):
-    """
-    A connection to an OpenEVSE equipment through its serial port, using
-    the RAPI protocol.
-    """
-
-    def __init__(self, port='/dev/ttyAMA0', baudrate=115200,
-                 status_callback=None):
-        """Initialize the serial connection to the OpenEVSE board
-        status_callback: a function to call if a "status change" line ($ST xx)
-                         is received
-            The callback function must accept only one argument
-            the new status, in text form (see the "states" dict)
+if SERIAL:
+    class SerialOpenEVSE(BaseOpenEVSE):
         """
-        import serial
-        self.new_status = None
-        self.sync = False
-        self.callback = status_callback
-        self.s = serial.Serial(port=port, baudrate=baudrate,
-                               timeout=STANDARD_SERIAL_TIMEOUT)
-        # The first call may be wrong because other characters may have been
-        # written on the serial port before initializing this class
-        # That's why there is this "try" and this second "echo"
-        try: self.echo(False)
-        except EvseError: self.echo(False)
-
-    def __del__(self):
-        """Destructor"""
-        self.stop_sync()
-        self.s.close()
-
-    def _thread_loop(self):
-        """Synchronous serial port reading loop..."""
-        while not self.stop_thread.is_set():
-            # First, read a line
-            try:
-                line = self._read_line()
-            except EvseTimeoutError:
-                continue
-            # Then if the line is a status change, execute the callback
-            if line[:3] in ('ST ', '$ST'):
-                self.callback(states[int(line.split()[1], 16)])
-                # write_allowed is only cleared if the board has been reset ;
-                # in this case, we should wait 1 more second before executing
-                # commands in order for the board to finish booting.
-                if not self.write_allowed.is_set():
-                    threading.Timer(1, self.write_allowed.set).start()
-                continue
-            # Do not write a new line if
-            # the previous one isn't read and is not old enough
-            previous_newline_age = 0
-            while (self.newline_available.is_set() and
-                   previous_newline_age <= NEWLINE_MAX_AGE):
-                time.sleep(SYNC_SERIAL_TIMEOUT)
-                previous_newline_age += SYNC_SERIAL_TIMEOUT
-            # Write the new received line
-            self.newline = line
-            self.newline_available.set()
-
-    def run_sync(self):
-        """Run the synchronous loop, in order to get status changes in realtime
-
-        Requires self.callback to be defined"""
-        if self.callback and not self.sync:
-            self.sync = True
-            self.s.timeout = SYNC_SERIAL_TIMEOUT
-            self.stop_thread = threading.Event()
-            self.newline_available = threading.Event()
-            self.write_allowed = threading.Event()
-            self.write_allowed.set()
-            self.sync_thread = threading.Thread(target=self._thread_loop)
-            self.sync_thread.start()
-
-    def stop_sync(self):
-        """Stop the synchronous loop if it has been started"""
-        if self.sync:
-            self.stop_thread.set()
-            self.sync_thread.join()
+        A connection to an OpenEVSE equipment through its serial port, using
+        the RAPI protocol.
+        """
+    
+        def __init__(self, port='/dev/ttyAMA0', baudrate=115200,
+                     status_callback=None):
+            """Initialize the serial connection to the OpenEVSE board
+            status_callback: a function to call if a "status change" line ($ST xx)
+                             is received
+                The callback function must accept only one argument
+                the new status, in text form (see the "states" dict)
+            """
+            self.new_status = None
             self.sync = False
-            self.s.timeout = STANDARD_SERIAL_TIMEOUT
-
-    def _read_line(self):
-        """Read a line from the serial port.
-
-        Reimplementation was needed beause readline inherited from _IOBase does
-        not allow \\r as an EOL character.
-        """
-        line = ''
-        while True:
-            c = self.s.read()
-            if c == '':
-                raise EvseTimeoutError
-            line += c
-            if c == '\r':
-                break
-        return line
-
-    def _get_response(self):
-        """Get the response of a command."""
-        if self.sync:
-            self.newline_available.wait()
-            response = self.newline.split()
-            self.newline_available.clear()
-            return (response[0] == '$OK', response[1:])
-        else:
-            response = self._read_line()
-            if response[:3] in CORRECT_RESPONSE_PREFIXES:
-                response = response.split()
+            self.callback = status_callback
+            self.s = serial.Serial(port=port, baudrate=baudrate,
+                                   timeout=STANDARD_SERIAL_TIMEOUT)
+            # The first call may be wrong because other characters may have been
+            # written on the serial port before initializing this class
+            # That's why there is this "try" and this second "echo"
+            try: self.echo(False)
+            except EvseError: self.echo(False)
+    
+        def __del__(self):
+            """Destructor"""
+            self.stop_sync()
+            self.s.close()
+    
+        def _thread_loop(self):
+            """Synchronous serial port reading loop..."""
+            while not self.stop_thread.is_set():
+                # First, read a line
+                try:
+                    line = self._read_line()
+                except EvseTimeoutError:
+                    continue
+                # Then if the line is a status change, execute the callback
+                if line[:3] in ('ST ', '$ST'):
+                    self.callback(states[int(line.split()[1], 16)])
+                    # write_allowed is only cleared if the board has been reset ;
+                    # in this case, we should wait 1 more second before executing
+                    # commands in order for the board to finish booting.
+                    if not self.write_allowed.is_set():
+                        threading.Timer(1, self.write_allowed.set).start()
+                    continue
+                # Do not write a new line if
+                # the previous one isn't read and is not old enough
+                previous_newline_age = 0
+                while (self.newline_available.is_set() and
+                       previous_newline_age <= NEWLINE_MAX_AGE):
+                    time.sleep(SYNC_SERIAL_TIMEOUT)
+                    previous_newline_age += SYNC_SERIAL_TIMEOUT
+                # Write the new received line
+                self.newline = line
+                self.newline_available.set()
+    
+        def run_sync(self):
+            """Run the synchronous loop, in order to get status changes in realtime
+    
+            Requires self.callback to be defined"""
+            if self.callback and not self.sync:
+                self.sync = True
+                self.s.timeout = SYNC_SERIAL_TIMEOUT
+                self.stop_thread = threading.Event()
+                self.newline_available = threading.Event()
+                self.write_allowed = threading.Event()
+                self.write_allowed.set()
+                self.sync_thread = threading.Thread(target=self._thread_loop)
+                self.sync_thread.start()
+    
+        def stop_sync(self):
+            """Stop the synchronous loop if it has been started"""
+            if self.sync:
+                self.stop_thread.set()
+                self.sync_thread.join()
+                self.sync = False
+                self.s.timeout = STANDARD_SERIAL_TIMEOUT
+    
+        def _read_line(self):
+            """Read a line from the serial port.
+    
+            Reimplementation was needed beause readline inherited from _IOBase does
+            not allow \\r as an EOL character.
+            """
+            line = ''
+            while True:
+                c = self.s.read()
+                if c == '':
+                    raise EvseTimeoutError
+                line += c
+                if c == '\r':
+                    break
+            return line
+    
+        def _get_response(self):
+            """Get the response of a command."""
+            if self.sync:
+                self.newline_available.wait()
+                response = self.newline.split()
+                self.newline_available.clear()
                 return (response[0] == '$OK', response[1:])
             else:
-                if response[:3] == '$ST':
-                    new_status = states[int(response.split()[1], 16)]
+                response = self._read_line()
+                if response[:3] in CORRECT_RESPONSE_PREFIXES:
+                    response = response.split()
+                    return (response[0] == '$OK', response[1:])
+                else:
+                    if response[:3] == '$ST':
+                        new_status = states[int(response.split()[1], 16)]
+                        if self.callback:
+                            self.callback(new_status)
+                        self.new_status = new_status
+                    return self._get_response()
+    
+        def _silent_request(self, *args):
+            """Send a request, do not read its response"""
+            command = '$' + ' '.join(args)
+            checksum = 0
+            for i in bytearray(command):
+                checksum ^= i
+            checksum = format(checksum, '02X')
+            request = command+'^'+checksum+'\r'
+            if self.sync:
+                self.write_allowed.wait()
+            self.s.write(request)
+    
+        def _request(self, *args):
+            """Send a requests, wait for its response"""
+            self._silent_request(*args)
+            return self._get_response()
+    
+        def _reinitialize(self):
+            """
+            Reinitialize the serial connection
+    
+            Raises EvseTimeoutError if the OpenEVSE did not reboot within 10 seconds
+            """
+            if self.sync:
+                self.write_allowed.clear()
+            else:
+                # Give the OpenEVSE at most RESET_SERIAL_TIMEOUT seconds to reboot
+                self.s.timeout = RESET_SERIAL_TIMEOUT
+                # Read the next received line, which should start with "ST"
+                line = self._read_line()
+                self.s.timeout = STANDARD_SERIAL_TIMEOUT
+                if line[:2] == 'ST':
+                    new_status = states[int(line.split()[1], 16)]
                     if self.callback:
                         self.callback(new_status)
                     self.new_status = new_status
-                return self._get_response()
-
-    def _silent_request(self, *args):
-        """Send a request, do not read its response"""
-        command = '$' + ' '.join(args)
-        checksum = 0
-        for i in bytearray(command):
-            checksum ^= i
-        checksum = format(checksum, '02X')
-        request = command+'^'+checksum+'\r'
-        if self.sync:
-            self.write_allowed.wait()
-        self.s.write(request)
-
-    def _request(self, *args):
-        """Send a requests, wait for its response"""
-        self._silent_request(*args)
-        return self._get_response()
-
-    def _reinitialize(self):
-        """
-        Reinitialize the serial connection
-
-        Raises EvseTimeoutError if the OpenEVSE did not reboot within 10 seconds
-        """
-        if self.sync:
-            self.write_allowed.clear()
-        else:
-            # Give the OpenEVSE at most RESET_SERIAL_TIMEOUT seconds to reboot
-            self.s.timeout = RESET_SERIAL_TIMEOUT
-            # Read the next received line, which should start with "ST"
-            line = self._read_line()
-            self.s.timeout = STANDARD_SERIAL_TIMEOUT
-            if line[:2] == 'ST':
-                new_status = states[int(line.split()[1], 16)]
-                if self.callback:
-                    self.callback(new_status)
-                self.new_status = new_status
-            else:
+                else:
+                    raise EvseError
+    
+    
+        def get_status_change(self):
+            """Get the new status if the status has changed
+    
+            If the status has not changed since the last test, None is returned.
+    
+            If the status has changed, the new status is returned as a string.
+    
+            If the status has changed and status_callback has been defined,
+            status_callback is called before returning the value.
+    
+            When applicable, This function should not be used when the sync thread
+            is running, in this case it raises EvseError."""
+            if self.sync:
                 raise EvseError
-
-
-    def get_status_change(self):
-        """Get the new status if the status has changed
-
-        If the status has not changed since the last test, None is returned.
-
-        If the status has changed, the new status is returned as a string.
-
-        If the status has changed and status_callback has been defined,
-        status_callback is called before returning the value.
-
-        When applicable, This function should not be used when the sync thread
-        is running, in this case it raises EvseError."""
-        if self.sync:
-            raise EvseError
-        else:
-            self.s.timeout = STATUS_SERIAL_TIMEOUT
-            try:
-                # Wait to have read all status changes, only return the last one
-                while True:
-                    self._get_response()
-            except EvseTimeoutError:
-                pass
-            self.s.timeout = STANDARD_SERIAL_TIMEOUT
-            # In fact, the callback is called by get_response...
-            # Here we only deal with the value of self.
-            status = self.new_status
-            self.new_status = None
-            return status
+            else:
+                self.s.timeout = STATUS_SERIAL_TIMEOUT
+                try:
+                    # Wait to have read all status changes, only return the last one
+                    while True:
+                        self._get_response()
+                except EvseTimeoutError:
+                    pass
+                self.s.timeout = STANDARD_SERIAL_TIMEOUT
+                # In fact, the callback is called by get_response...
+                # Here we only deal with the value of self.
+                status = self.new_status
+                self.new_status = None
+                return status
 
 
 class WifiOpenEVSE(BaseOpenEVSE):
