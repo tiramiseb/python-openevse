@@ -2,6 +2,13 @@
 Python-OpenEVSE changelog
 =========================
 
+v0.4 (2017-02-06)
+-----------------
+
+* Support for requests via the wifi kit
+
+Thanks to Danny ter Haar for letting me use his hardware to test this.
+
 v0.3 (2015-08-01)
 -----------------
 
