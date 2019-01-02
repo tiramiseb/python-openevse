@@ -810,7 +810,7 @@ class WifiOpenEVSE(BaseOpenEVSE):
         """Initialize the connection to the wifi board."""
         import urllib2
         self.hostname = hostname
-        self.regex = re.compile(".*\$(.*\^..).*")
+        self.regex = re.compile(".*\$(.*)\^...*")
 
     def _silent_request(self, *args):
         self._request(*args)
