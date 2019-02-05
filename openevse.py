@@ -809,7 +809,7 @@ if SERIAL:
             request = command + '^' + checksum + '\r'
             if self.sync:
                 self.write_allowed.wait()
-            self.s.write(request)
+            self.s.write(request.encode('ascii'))
     
         def _request(self, *args):
             """Send a requests, wait for its response"""
