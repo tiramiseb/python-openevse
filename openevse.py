@@ -98,7 +98,7 @@ except ImportError:
     SERIAL = False
 import threading
 import time
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 _version = '0.4'
 
@@ -808,7 +808,7 @@ class WifiOpenEVSE(BaseOpenEVSE):
 
     def __init__(self, hostname):
         """Initialize the connection to the wifi board."""
-        import urllib2
+        import urllib.request, urllib.error, urllib.parse
         self.hostname = hostname
         self.regex = re.compile(".*\$(.*)\^...*")
 
@@ -818,7 +818,7 @@ class WifiOpenEVSE(BaseOpenEVSE):
     def _request(self, *args):
         url = "http://{host}/r?rapi=%24{cmd}".format(host=self.hostname,
                                                      cmd='+'.join(args))
-        resp = urllib2.urlopen(url)
+        resp = urllib.request.urlopen(url)
         match = self.regex.match(resp.read())
         if not match:
             return (False, "")
