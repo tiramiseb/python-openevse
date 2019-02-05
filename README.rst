@@ -43,8 +43,11 @@ License
 `MIT <http://opensource.org/licenses/MIT>`_
 
 Copyright (c) 2015 Sébastien Maccagnoni-Munch
+Copyright (c) 2019 Vitaly Greck
 
-In short : do what you want but keep my name in the resulting software.
+In short : do what you want but keep our names in the resulting software.
+
+As of Feb 5, 2019, Vitaly Greck has taken over the management of this project.
 
 Please, if you improve it, contribute back. Thanks ! :)
 
