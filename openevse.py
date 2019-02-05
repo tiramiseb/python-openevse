@@ -689,6 +689,14 @@ if SERIAL:
                 The callback function must accept only one argument
                 the new status, in text form (see the "states" dict)
             """
+
+            self.respose_regex = re.compile(
+                '^\
+\\$(?P<status>(OK)|(NK))( (?P<args>.*?))?(:(?P<seq>[0123456789ABCDEF]{2}))?\\^(?P<csum>[0123456789ABCDEF]{2})\
+$',
+                re.IGNORECASE
+            )
+
             self.new_status = None
             self.sync = False
             self.callback = status_callback
@@ -778,19 +786,23 @@ if SERIAL:
                 if c == b'\r':
                     break
             return line
-    
+
         def _get_response(self):
             """Get the response of a command."""
             if self.sync:
                 self.newline_available.wait()
-                response = self.newline.split()
+                response = self.newline
                 self.newline_available.clear()
-                return response[0] == '$OK', response[1:]
+                response_match = self.respose_regex.match(response)
+                if response_match is not None:
+                    return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
+                else:
+                    return False, []
             else:
                 response = self._read_line()
-                if response[:3] in CORRECT_RESPONSE_PREFIXES:
-                    response = response.split()
-                    return response[0] == '$OK', response[1:]
+                response_match = self.respose_regex.match(response)
+                if response_match is not None:
+                    return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
                 else:
                     if response[:3] == '$ST':
                         new_status = states[int(response.split()[1], 16)]
@@ -798,7 +810,7 @@ if SERIAL:
                             self.callback(new_status)
                         self.new_status = new_status
                     return self._get_response()
-    
+
         def _silent_request(self, *args):
             """Send a request, do not read its response"""
             command = '$' + ' '.join(args)
