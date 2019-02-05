@@ -693,7 +693,7 @@ if SERIAL:
             self.respose_regex = re.compile(
                 '^\
 \\$(?P<status>(OK)|(NK))( (?P<args>.*?))?(:(?P<seq>[0123456789ABCDEF]{2}))?\\^(?P<csum>[0123456789ABCDEF]{2})\
-$',
+\r$',
                 re.IGNORECASE
             )
 
