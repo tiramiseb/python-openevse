@@ -388,7 +388,7 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['diode_check']
-        if self._request('SD', str(int(enabled)))[0]:
+        if self._request('FF', 'D', '1' if enabled else '0')[0]:
             return enabled
 
         raise EvseError
@@ -398,7 +398,7 @@ class BaseOpenEVSE:
 
         THIS LIBRARY IS NOT MEANT TO BE USED WITH ECHO ENABLED
         """
-        if self._request('SE', str(int(enabled)))[0]:
+        if self._request('FF', 'E', '1' if enabled else '0')[0]:
             return True
 
         raise EvseError
@@ -414,7 +414,7 @@ class BaseOpenEVSE:
         if enabled is None:
             return self._flags()['gfi_self_test']
 
-        if self._request('SF', str(int(enabled)))[0]:
+        if self._request('FF', 'F', '1' if enabled else '0')[0]:
             return enabled
 
         raise EvseError
@@ -430,7 +430,7 @@ class BaseOpenEVSE:
         if enabled is None:
             return self._flags()['ground_check']
 
-        if self._request('SG', str(int(enabled)))[0]:
+        if self._request('FF', 'G', '1' if enabled else '0')[0]:
             return enabled
 
         raise EvseError
@@ -515,7 +515,7 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['stuck_relay_check']
-        if self._request('SR', str(int(enabled)))[0]:
+        if self._request('FF', 'R', '1' if enabled else '0')[0]:
             return enabled
 
         raise EvseError
@@ -545,7 +545,7 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['vent_required']
-        if self._request('SV', str(int(enabled)))[0]:
+        if self._request('FF', 'V', '1' if enabled else '0')[0]:
             return enabled
 
         raise EvseError
