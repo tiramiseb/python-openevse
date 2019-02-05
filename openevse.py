@@ -772,10 +772,10 @@ if SERIAL:
             line = ''
             while True:
                 c = self.s.read()
-                if c == '':
+                if c == b'':
                     raise EvseTimeoutError
-                line += c
-                if c == '\r':
+                line += c.decode('ascii')
+                if c == b'\r':
                     break
             return line
     
