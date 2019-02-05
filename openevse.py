@@ -803,7 +803,7 @@ if SERIAL:
             """Send a request, do not read its response"""
             command = '$' + ' '.join(args)
             checksum = 0
-            for i in bytearray(command):
+            for i in bytearray(command, 'ascii'):
                 checksum ^= i
             checksum = format(checksum, '02X')
             request = command + '^' + checksum + '\r'
