@@ -98,29 +98,31 @@ except ImportError:
     SERIAL = False
 import threading
 import time
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 
 _version = '0.4'
 
 states = {
-        0: 'unknown',
-        1: 'not connected',
-        2: 'connected',
-        3: 'charging',
-        4: 'vent required',
-        5: 'diode check failed',
-        6: 'gfci fault',
-        7: 'no ground',
-        8: 'stuck relay',
-        9: 'gfci self-test failure',
-        10: 'over temperature',
-        254: 'sleeping',
-        255: 'disabled'
+    0: 'unknown',
+    1: 'not connected',
+    2: 'connected',
+    3: 'charging',
+    4: 'vent required',
+    5: 'diode check failed',
+    6: 'gfci fault',
+    7: 'no ground',
+    8: 'stuck relay',
+    9: 'gfci self-test failure',
+    10: 'over temperature',
+    254: 'sleeping',
+    255: 'disabled'
 }
-_lcd_colors = ['off','red','green','yellow','blue','violet','teal','white']
-_status_functions = {'disable':'FD', 'enable':'FE', 'sleep':'FS'}
-_lcd_types=['monochrome', 'rgb']
-_service_levels=['A', '1', '2']
+_lcd_colors = ['off', 'red', 'green', 'yellow', 'blue', 'violet', 'teal', 'white']
+_status_functions = {'disable': 'FD', 'enable': 'FE', 'sleep': 'FS'}
+_lcd_types = ['monochrome', 'rgb']
+_service_levels = ['A', '1', '2']
 
 # Timeouts in seconds
 STANDARD_SERIAL_TIMEOUT = 0.5
@@ -131,23 +133,31 @@ NEWLINE_MAX_AGE = 5
 
 CORRECT_RESPONSE_PREFIXES = ('$OK', '$NK')
 
+
 class EvseError(Exception):
     pass
+
+
 class EvseTimeoutError(EvseError):
     pass
+
+
 class NoClock(EvseError):
     pass
-class NotCharging(Exception):
+
+
+class NotCharging(EvseError):
     pass
+
 
 class BaseOpenEVSE:
     """Inherit from this class"""
 
-    def _silent_request(self, command):
+    def _silent_request(self, *args):
         """Send a request and ignore its response"""
         raise NotImplementedError
 
-    def _request(self, command):
+    def _request(self, *args):
         """Send a request and return its response"""
         raise NotImplementedError
 
@@ -175,8 +185,10 @@ class BaseOpenEVSE:
         * serial_debug
         """
         done, data = self._request('GE')
-        if done: flags = int(data[1], 16)
-        else: raise EvseError
+        if done:
+            flags = int(data[1], 16)
+        else:
+            raise EvseError
         return {
             'service_level': (flags & 0x0001) + 1,
             'diode_check': not flags & 0x0002,
@@ -194,7 +206,7 @@ class BaseOpenEVSE:
         """Reset the OpenEVSE"""
         self._silent_request('FR')
         self._reinitialize()
-        time.sleep(1) # Let the OpenEVSE finish its boot sequence...
+        time.sleep(1)  # Let the OpenEVSE finish its boot sequence...
 
     def lcd_backlight_color(self, color='off'):
         """Change the LCD backlight color
@@ -212,7 +224,9 @@ class BaseOpenEVSE:
         Default: off (disable the backlight)
         """
         colorcode = _lcd_colors.index(color)
-        if self._request('FB', str(colorcode))[0]: return True
+        if self._request('FB', str(colorcode))[0]:
+            return True
+
         raise EvseError
 
     def status(self, action=None):
@@ -233,11 +247,14 @@ class BaseOpenEVSE:
             function = _status_functions[action]
             done, data = self._request(function)
             if done:
-                if data: return states[int(data[0], 16)]
+                if data:
+                    return states[int(data[0], 16)]
             else:
                 raise EvseError
         done, data = self._request('GS')
-        if done: return states[int(data[0])]
+        if done:
+            return states[int(data[0])]
+
         raise EvseError
 
     def display_text(self, x, y, text):
@@ -247,7 +264,9 @@ class BaseOpenEVSE:
           * x and y: cursor position
           * text: text to display
           """
-        if self._request('FP', str(x), str(y), str(text))[0]: return True
+        if self._request('FP', str(x), str(y), str(text))[0]:
+            return True
+
         raise EvseError
 
     def lcd_type(self, lcdtype=None):
@@ -263,7 +282,8 @@ class BaseOpenEVSE:
         """
         if lcdtype:
             typecode = _lcd_types.index(lcdtype)
-            if self._request('S0', str(typecode))[0]: return lcdtype
+            if self._request('S0', str(typecode))[0]:
+                return lcdtype
         else:
             return self._flags()['lcd_type']
         raise EvseError
@@ -279,26 +299,29 @@ class BaseOpenEVSE:
         Returns a datetime object
         """
         if the_datetime:
-            if self._request('S1',the_datetime.strftime('%y'), str(the_datetime.month),
-                             str(the_datetime.day), str(the_datetime.hour),
-                             str(the_datetime.minute), str(the_datetime.second))[0]:
+            if self._request(
+                    'S1',
+                    the_datetime.strftime('%y'), str(the_datetime.month), str(the_datetime.day),
+                    str(the_datetime.hour), str(the_datetime.minute), str(the_datetime.second)
+            )[0]:
                 return the_datetime
         else:
             done, data = self._request('GT')
             if done:
                 if data == ['165', '165', '165', '165', '165', '85']:
                     raise NoClock
-                return datetime.datetime(year=int(data[0])+2000,
-                                         month=int(data[1]),
-                                         day=int(date[2]),
-                                         hour=int(delta[3]),
-                                         minute=int(delta[4]),
-                                         second=int(delta[5]))
+                return datetime.datetime(
+                    year=int(data[0])+2000, month=int(data[1]), day=int(data[2]),
+                    hour=int(data[3]), minute=int(data[4]), second=int(data[5])
+                )
+
         raise EvseError
 
     def ammeter_calibration(self, enabled=True):
         """Enable or disable ammeter calibration mode"""
-        if self._request('S2', str(int(enabled)))[0]: return True
+        if self._request('S2', str(int(enabled)))[0]:
+            return True
+
         raise EvseError
 
     def time_limit(self, limit=None):
@@ -312,10 +335,13 @@ class BaseOpenEVSE:
         """
         if limit is None:
             done, data = self._request('G3')
-            if done: return int(data[0])*15
+            if done:
+                return int(data[0])*15
         else:
             limit = int(round(limit/15.0))
-            if self._request('S3', str(limit))[0]: return limit
+            if self._request('S3', str(limit))[0]:
+                return limit
+
         raise EvseError
 
     def ammeter_settings(self, scalefactor=None, offset=None):
@@ -327,10 +353,12 @@ class BaseOpenEVSE:
         """
         if scalefactor is not None and offset is not None:
             if self._request('SA', str(scalefactor), str(offset))[0]:
-                return (scalefactor, offset)
+                return scalefactor, offset
         else:
             done, data = self._request('GA')
-            if done: return (int(data[0]), int(data[1]))
+            if done:
+                return int(data[0]), int(data[1])
+
         raise EvseError
 
     def current_capacity(self, capacity=None):
@@ -341,10 +369,13 @@ class BaseOpenEVSE:
         Returns the capacity in amperes
         """
         if capacity:
-            if self._request('SC', str(capacity))[0]: return capacity
+            if self._request('SC', str(capacity))[0]:
+                return capacity
         else:
             done, data = self._request('GE')
-            if done: return int(data[0])
+            if done:
+                return int(data[0])
+
         raise EvseError
 
     def diode_check(self, enabled=None):
@@ -357,7 +388,9 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['diode_check']
-        if self._request('SD', str(int(enabled)))[0]: return enabled
+        if self._request('FF', 'D', '1' if enabled else '0')[0]:
+            return enabled
+
         raise EvseError
 
     def echo(self, enabled=True):
@@ -365,7 +398,9 @@ class BaseOpenEVSE:
 
         THIS LIBRARY IS NOT MEANT TO BE USED WITH ECHO ENABLED
         """
-        if self._request('SE', str(int(enabled)))[0]: return True
+        if self._request('FF', 'E', '1' if enabled else '0')[0]:
+            return True
+
         raise EvseError
 
     def gfi_self_test(self, enabled=None):
@@ -378,7 +413,10 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['gfi_self_test']
-        if self._request('SF', str(int(enabled)))[0]: return enabled
+
+        if self._request('FF', 'F', '1' if enabled else '0')[0]:
+            return enabled
+
         raise EvseError
 
     def ground_check(self, enabled=None):
@@ -391,7 +429,10 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['ground_check']
-        if self._request('SG', str(int(enabled)))[0]: return enabled
+
+        if self._request('FF', 'G', '1' if enabled else '0')[0]:
+            return enabled
+
         raise EvseError
 
     def charge_limit(self, limit=None):
@@ -401,9 +442,12 @@ class BaseOpenEVSE:
         """
         if limit is None:
             done, data = self._request('GH')
-            if done: return int(data[0])
+            if done:
+                return int(data[0])
         else:
-            if self._request('SH', str(int(limit)))[0]: return limit
+            if self._request('SH', str(int(limit)))[0]:
+                return limit
+
         raise EvseError
 
     def accumulated_wh(self, wh=None):
@@ -413,9 +457,12 @@ class BaseOpenEVSE:
         """
         if wh is None:
             done, data = self._request('GU')
-            if done: return int(data[1])
+            if done:
+                return int(data[1])
         else:
-            if self._request('SK', str(int(wh)))[0]: return wh
+            if self._request('SK', str(int(wh)))[0]:
+                return wh
+
         raise EvseError
 
     def service_level(self, level=None):
@@ -432,12 +479,13 @@ class BaseOpenEVSE:
         """
         if level is None:
             flags = self._flags()
-            if flags.auto_service_level:
+            if flags['auto_service_level']:
                 return 0
-            return flags.service_level
+            return flags['service_level']
         else:
-            levelcode = _service_levels[level]
-            if self._request('SL', levelcode)[0]: return level
+            if self._request('SL', _service_levels[level])[0]:
+                return level
+
         raise EvseError
 
     def voltmeter_settings(self, scalefactor, offset):
@@ -449,10 +497,12 @@ class BaseOpenEVSE:
         """
         if scalefactor is not None and offset is not None:
             if self._request('SM', str(scalefactor), str(offset))[0]:
-                return (scalefactor, offset)
+                return scalefactor, offset
         else:
             done, data = self._request('GM')
-            if done: return (int(data[0]), int(data[1]))
+            if done:
+                return int(data[0]), int(data[1])
+
         raise EvseError
 
     def stuck_relay_check(self, enabled=True):
@@ -465,7 +515,9 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['stuck_relay_check']
-        if self._request('SR', str(int(enabled)))[0]: return enabled
+        if self._request('FF', 'R', '1' if enabled else '0')[0]:
+            return enabled
+
         raise EvseError
 
     def timer(self, starthour=None, startminute=None, endhour=None, endminute=None):
@@ -477,9 +529,10 @@ class BaseOpenEVSE:
            endhour is None or endminute is None:
             done = self._request('ST', '0', '0', '0', '0')[0]
         else:
-            done = self._request('ST', str(starthour), str(startminute),
-                                  str(endhour), str(endminute))[0]
-        if done: return True
+            done = self._request('ST', str(starthour), str(startminute), str(endhour), str(endminute))[0]
+        if done:
+            return True
+
         raise EvseError
 
     def vent_required(self, enabled=None):
@@ -492,7 +545,9 @@ class BaseOpenEVSE:
         """
         if enabled is None:
             return self._flags()['vent_required']
-        if self._request('SV', str(int(enabled)))[0]: return enabled
+        if self._request('FF', 'V', '1' if enabled else '0')[0]:
+            return enabled
+
         raise EvseError
 
     def current_capacity_range(self):
@@ -504,7 +559,9 @@ class BaseOpenEVSE:
             (min_capacity, max_capacity)
         """
         done, data = self._request('GC')
-        if done: return (int(data[0]), int(data[1]))
+        if done:
+            return int(data[0]), int(data[1])
+
         raise EvseError
 
     def fault_counters(self):
@@ -525,6 +582,7 @@ class BaseOpenEVSE:
                 'Ground': int(data[1], 16),
                 'Stuck relay': int(data[2], 16)
             }
+
         raise EvseError
 
     def charging_current_and_voltage(self):
@@ -541,12 +599,11 @@ class BaseOpenEVSE:
         if done:
             milliamps = float(data[0])
             millivolts = float(data[1])
-            amps = float(milliamps)/1000 if milliamps > 0 else 0.0
-            volts = float(millivolts)/1000 if millivolts > 0 else 0.0
             return {
-                'amps': amps,
-                'volts': volts
+                'amps': float(milliamps) / 1000 if milliamps > 0 else 0.0,
+                'volts': float(millivolts) / 1000 if millivolts > 0 else 0.0
             }
+
         raise EvseError
 
     def temperature(self):
@@ -569,6 +626,7 @@ class BaseOpenEVSE:
                 'mcp9808temp': float(data[1])/10,
                 'tmp007temp': float(data[2])/10
             }
+
         raise EvseError
 
     def elapsed(self):
@@ -592,8 +650,8 @@ class BaseOpenEVSE:
             done, data2 = self._request('GU')
             if done:
                 return {
-                    'seconds':int(data1[1]),
-                    'Wh':float(data2[0])/3600
+                    'seconds': int(data1[1]),
+                    'Wh': float(data2[0])/3600
                 }
         raise EvseError
 
@@ -613,7 +671,9 @@ class BaseOpenEVSE:
                 'firmware': data[0],
                 'protocol': data[1]
             }
+
         raise EvseError
+
 
 if SERIAL:
     class SerialOpenEVSE(BaseOpenEVSE):
@@ -622,24 +682,39 @@ if SERIAL:
         the RAPI protocol.
         """
     
-        def __init__(self, port='/dev/ttyAMA0', baudrate=115200,
-                     status_callback=None):
+        def __init__(self, port='/dev/ttyAMA0', baudrate=115200, status_callback=None):
             """Initialize the serial connection to the OpenEVSE board
             status_callback: a function to call if a "status change" line ($ST xx)
                              is received
                 The callback function must accept only one argument
                 the new status, in text form (see the "states" dict)
             """
+
+            self.respose_regex = re.compile(
+                '^\
+\\$(?P<status>(OK)|(NK))( (?P<args>.*?))?(:(?P<seq>[0123456789ABCDEF]{2}))?\\^(?P<csum>[0123456789ABCDEF]{2})\
+\r$',
+                re.IGNORECASE
+            )
+
             self.new_status = None
             self.sync = False
             self.callback = status_callback
-            self.s = serial.Serial(port=port, baudrate=baudrate,
-                                   timeout=STANDARD_SERIAL_TIMEOUT)
+            self.s = serial.Serial(port=port, baudrate=baudrate, timeout=STANDARD_SERIAL_TIMEOUT)
+
+            # thread loop related stuff
+            self.sync_thread = None
+            self.stop_thread = None
+            self.write_allowed = None
+            self.newline_available = None
+
             # The first call may be wrong because other characters may have been
             # written on the serial port before initializing this class
             # That's why there is this "try" and this second "echo"
-            try: self.echo(False)
-            except EvseError: self.echo(False)
+            try:
+                self.echo(False)
+            except EvseError:
+                self.echo(False)
     
         def __del__(self):
             """Destructor"""
@@ -705,25 +780,29 @@ if SERIAL:
             line = ''
             while True:
                 c = self.s.read()
-                if c == '':
+                if c == b'':
                     raise EvseTimeoutError
-                line += c
-                if c == '\r':
+                line += c.decode('ascii')
+                if c == b'\r':
                     break
             return line
-    
+
         def _get_response(self):
             """Get the response of a command."""
             if self.sync:
                 self.newline_available.wait()
-                response = self.newline.split()
+                response = self.newline
                 self.newline_available.clear()
-                return (response[0] == '$OK', response[1:])
+                response_match = self.respose_regex.match(response)
+                if response_match is not None:
+                    return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
+                else:
+                    return False, []
             else:
                 response = self._read_line()
-                if response[:3] in CORRECT_RESPONSE_PREFIXES:
-                    response = response.split()
-                    return (response[0] == '$OK', response[1:])
+                response_match = self.respose_regex.match(response)
+                if response_match is not None:
+                    return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
                 else:
                     if response[:3] == '$ST':
                         new_status = states[int(response.split()[1], 16)]
@@ -731,18 +810,18 @@ if SERIAL:
                             self.callback(new_status)
                         self.new_status = new_status
                     return self._get_response()
-    
+
         def _silent_request(self, *args):
             """Send a request, do not read its response"""
             command = '$' + ' '.join(args)
             checksum = 0
-            for i in bytearray(command):
+            for i in bytearray(command, 'ascii'):
                 checksum ^= i
             checksum = format(checksum, '02X')
-            request = command+'^'+checksum+'\r'
+            request = command + '^' + checksum + '\r'
             if self.sync:
                 self.write_allowed.wait()
-            self.s.write(request)
+            self.s.write(request.encode('ascii'))
     
         def _request(self, *args):
             """Send a requests, wait for its response"""
@@ -770,8 +849,7 @@ if SERIAL:
                     self.new_status = new_status
                 else:
                     raise EvseError
-    
-    
+
         def get_status_change(self):
             """Get the new status if the status has changed
     
@@ -808,20 +886,18 @@ class WifiOpenEVSE(BaseOpenEVSE):
 
     def __init__(self, hostname):
         """Initialize the connection to the wifi board."""
-        import urllib2
         self.hostname = hostname
-        self.regex = re.compile(".*\$(.*)\^...*")
+        self.regex = re.compile(".*\\$(.*)\\^...*")
 
     def _silent_request(self, *args):
         self._request(*args)
 
     def _request(self, *args):
-        url = "http://{host}/r?rapi=%24{cmd}".format(host=self.hostname,
-                                                     cmd='+'.join(args))
-        resp = urllib2.urlopen(url)
+        url = "http://{host}/r?rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
+        resp = urllib.request.urlopen(url)
         match = self.regex.match(resp.read())
         if not match:
-            return (False, "")
+            return False, ""
         else:
             response = match.group(1).split()
-            return (response[0] == 'OK', response[1:])
+            return response[0] == 'OK', response[1:]
