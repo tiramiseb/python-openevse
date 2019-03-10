@@ -887,7 +887,9 @@ class WifiOpenEVSE(BaseOpenEVSE):
     def __init__(self, hostname):
         """Initialize the connection to the wifi board."""
         self.hostname = hostname
-        self.regex = re.compile(".*\\$(.*)\\^...*")
+        # See https://github.com/OpenEVSE/ESP8266_WiFi_v2.x/blob/master/src/html/openevse.js#L70
+        # For OpenEVSE's Web UIs version of the regex
+        self.regex = re.compile("\\$([^\\^]*)(\\^..)?")
 
     def _silent_request(self, *args):
         self._request(*args)
