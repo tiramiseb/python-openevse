@@ -887,15 +887,21 @@ class WifiOpenEVSE(BaseOpenEVSE):
     def __init__(self, hostname):
         """Initialize the connection to the wifi board."""
         self.hostname = hostname
-        self.regex = re.compile(".*\\$(.*)\\^...*")
+        # See https://github.com/OpenEVSE/ESP8266_WiFi_v2.x/blob/master/src/html/openevse.js#L70
+        # For OpenEVSE's Web UIs version of the regex
+        self.regex = re.compile("\\$([^\\^]*)(\\^..)?")
 
     def _silent_request(self, *args):
         self._request(*args)
 
     def _request(self, *args):
-        url = "http://{host}/r?rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
+        import json
+        url = "http://{host}/r?json=1&rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
         resp = urllib.request.urlopen(url)
-        match = self.regex.match(resp.read())
+        data = json.loads(resp.read())
+        if "ret" not in data:
+            return False, ""
+        match = self.regex.match(data["ret"])
         if not match:
             return False, ""
         else:
