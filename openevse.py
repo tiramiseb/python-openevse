@@ -89,6 +89,7 @@ Example:
 >>> print o.current_capacity()
 """
 
+import base64
 import datetime
 import re
 try:
@@ -98,9 +99,7 @@ except ImportError:
     SERIAL = False
 import threading
 import time
-import urllib.request
-import urllib.error
-import urllib.parse
+import urllib2
 
 _version = '0.4'
 
@@ -884,12 +883,14 @@ class WifiOpenEVSE(BaseOpenEVSE):
     """A connection to an OpenEVSE equipment through the wifi kit."""
     sync = False
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, username = None, password = None):
         """Initialize the connection to the wifi board."""
         self.hostname = hostname
         # See https://github.com/OpenEVSE/ESP8266_WiFi_v2.x/blob/master/src/html/openevse.js#L70
         # For OpenEVSE's Web UIs version of the regex
         self.regex = re.compile("\\$([^\\^]*)(\\^..)?")
+        self.username = username
+        self.password = password
 
     def _silent_request(self, *args):
         self._request(*args)
@@ -897,7 +898,12 @@ class WifiOpenEVSE(BaseOpenEVSE):
     def _request(self, *args):
         import json
         url = "http://{host}/r?json=1&rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
-        resp = urllib.request.urlopen(url)
+        request = urllib2.Request(url)
+        if self.username and self.password:
+            base64string = base64.encodestring(
+                '%s:%s' % (self.username, self.password)).replace('\n', '')
+            request.add_header("Authorization", "Basic %s" % base64string)
+        resp = urllib2.urlopen(request)
         data = json.loads(resp.read())
         if "ret" not in data:
             return False, ""
