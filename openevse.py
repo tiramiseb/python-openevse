@@ -893,9 +893,9 @@ class WifiOpenEVSE(BaseOpenEVSE):
         self.regex = re.compile("\\$([^\\^]*)(\\^..)?")
         if username and password:
             userpass = '%s:%s' % (username, password)
-            self.base64auth = base64.encodebytes(userpass.encode()).decode().rstrip()
+            self.authstring = base64.encodebytes(userpass.encode()).decode().rstrip()
         else:
-            self.base64auth = None
+            self.authstring = None
 
     def _silent_request(self, *args):
         self._request(*args)
@@ -904,8 +904,8 @@ class WifiOpenEVSE(BaseOpenEVSE):
         import json
         url = "http://{host}/r?json=1&rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
         request = urllib.request.Request(url)
-        if self.base64auth:
-            request.add_header("Authorization", "Basic %s" % self.base64auth)
+        if self.authstring:
+            request.add_header("Authorization", "Basic %s" % self.authstring)
         resp = urllib.request.urlopen(request)
         data = json.loads(resp.read())
         if "ret" not in data:
