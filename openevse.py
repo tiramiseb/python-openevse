@@ -89,6 +89,7 @@ Example:
 >>> print o.current_capacity()
 """
 
+import base64
 import datetime
 import re
 try:
@@ -884,12 +885,17 @@ class WifiOpenEVSE(BaseOpenEVSE):
     """A connection to an OpenEVSE equipment through the wifi kit."""
     sync = False
 
-    def __init__(self, hostname):
+    def __init__(self, hostname, username = None, password = None):
         """Initialize the connection to the wifi board."""
         self.hostname = hostname
         # See https://github.com/OpenEVSE/ESP8266_WiFi_v2.x/blob/master/src/html/openevse.js#L70
         # For OpenEVSE's Web UIs version of the regex
         self.regex = re.compile("\\$([^\\^]*)(\\^..)?")
+        if username and password:
+            userpass = '%s:%s' % (username, password)
+            self.authstring = base64.encodebytes(userpass.encode()).decode().rstrip()
+        else:
+            self.authstring = None
 
     def _silent_request(self, *args):
         self._request(*args)
@@ -897,7 +903,10 @@ class WifiOpenEVSE(BaseOpenEVSE):
     def _request(self, *args):
         import json
         url = "http://{host}/r?json=1&rapi=%24{cmd}".format(host=self.hostname, cmd='+'.join(args))
-        resp = urllib.request.urlopen(url)
+        request = urllib.request.Request(url)
+        if self.authstring:
+            request.add_header("Authorization", "Basic %s" % self.authstring)
+        resp = urllib.request.urlopen(request)
         data = json.loads(resp.read())
         if "ret" not in data:
             return False, ""
